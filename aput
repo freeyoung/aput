@@ -1,0 +1,98 @@
+#!/bin/bash
+CHANGES_FILE=$1
+APUT_CONF=$HOME/.aput.cfg
+
+# ~/.aput.cfg.example:
+# APUT_HOST=deb.yourdomain.com
+# APUT_SSH_USER=username
+# APUT_SSH_PORT=22
+# APUT_REPO_OWNER=www-data
+# APUT_REPO_NAME=myrepo
+# APUT_REPO_DIST=trusty
+# APUT_REPO_ARCH=i386,amd64,all,source
+
+if [ -z "${CHANGES_FILE}" ]; then
+    echo "$0 - package upload tool for Aptly-managed debian repository"
+    echo "e.g. $0 banana_0.0.1_amd64.changes"
+    exit 1
+fi
+
+# Source the config file of aput
+# shellcheck disable=SC1090
+[ -f "$APUT_CONF" ] && . "$APUT_CONF"
+
+if [ -z "$APUT_HOST" ] || [ -z "$APUT_SSH_USER" ] || \
+    [ -z "$APUT_SSH_PORT" ] || [ -z "$APUT_REPO_NAME" ] || \
+    [ -z "$APUT_REPO_DIST" ] || [ -z "$APUT_REPO_ARCH" ]
+then
+    echo "$HOME/.aput.cfg missing or properties not fully set."
+    exit 2
+fi
+
+# Verify GPG (if exists), md5sum and file size
+verify() {
+    local md5
+    local size
+    local fname
+    md5="$( echo "$1" | awk '{ print $1 }' )"
+    size="$( echo "$1" | awk '{ print $2 }' )"
+    fname="$( echo "$1" | awk '{ print $NF }' )"
+
+    if [[ "$fname" == *.dsc ]] && ! gpgv "$fname" 2>/dev/null ; then
+        echo "GPG verification failed: $fname"
+        return 1
+    fi
+
+    if [ ! -f "$fname" ]; then
+        echo "File does not exist: $fname"
+        return 2
+    elif [ "$md5" != "$( md5sum "$fname" | awk '{print $1}' )" ]; then
+        echo "MD5 checksum mismatch: $fname"
+        return 1
+    elif [ "$size" != "$( stat "$fname" | awk '/Size/ {print $2}' )" ]; then
+        echo "File size mismatch: $fname"
+        return 1
+    else
+        return 0
+    fi
+}
+
+# Verify and collect the files to upload from the .changes-file
+filelist=()
+while read -r line
+do
+    verify "$line"
+    return_code=$?
+    [ $return_code = 0 ] || exit $return_code
+    fname="$( echo "$line" | awk '{ print $NF }' )"
+    filelist+=("$fname")
+done < <(sed -e '0,/Files/d' -e '/^$/,$d' "$CHANGES_FILE")
+
+# Create a tmpdir on the remote server and scp the files collected
+echo ">>> Uploading..."
+tmpdir=$( ssh -p "$APUT_SSH_PORT" "$APUT_SSH_USER@$APUT_HOST" "mktemp -d" )
+scp -P "$APUT_SSH_PORT" "${filelist[@]}" "$APUT_SSH_USER@$APUT_HOST:$tmpdir"
+
+# Construct the commands to execute on the remote server for aptly publish
+echo ">>> Publishing..."
+command="
+# chown the tmpdir so that the repodir owner can access it
+sudo chown -R $APUT_REPO_OWNER: $tmpdir &&
+# Add the files collected into the local repo
+sudo su - $APUT_REPO_OWNER sh -c \
+    \"aptly repo add $APUT_REPO_NAME $tmpdir\" &&
+# If publish does not exist, create one
+sudo su - $APUT_REPO_OWNER sh -c \
+    \"[ -f ~/.aptly/public/dists/$APUT_REPO_DIST/Release ] || \
+        aptly publish repo -architectures=$APUT_REPO_ARCH $APUT_REPO_NAME\" | \
+        sed \"s/your-server/$APUT_HOST/\" &&
+# or simply update it
+sudo su - $APUT_REPO_OWNER sh -c \
+    \"aptly publish update $APUT_REPO_DIST\" &&
+# Cleanup
+sudo rm -rf $tmpdir
+"
+
+# Run the commands remotely
+# shellcheck disable=SC2029
+ssh -p "$APUT_SSH_PORT" "$APUT_SSH_USER@$APUT_HOST" "$command"
