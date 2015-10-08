@@ -76,6 +76,14 @@ If you are an experienced user, just pick what you need.
 
   Remember to reload your nginx server.
 
+- Symlink `aput` to your PATH
+
+  ```
+  $ git clone https://github.com/freeyoung/aput
+  $ cd aput
+  $ sudo ln -sf aput /usr/local/bin/aput
+  ```
+
 - Build and upload your package
 
   ```
