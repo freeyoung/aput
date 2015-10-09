@@ -84,7 +84,8 @@ sudo su - $APUT_REPO_OWNER sh -c \
 # If publish does not exist, create one
 sudo su - $APUT_REPO_OWNER sh -c \
     \"[ -f ~/.aptly/public/dists/$APUT_REPO_DIST/Release ] || \
-        aptly publish repo -architectures=$APUT_REPO_ARCH $APUT_REPO_NAME\" | \
+        aptly publish repo -architectures=$APUT_REPO_ARCH\
+                           -distribution=$APUT_REPO_DIST $APUT_REPO_NAME\" | \
         sed \"s/your-server/$APUT_HOST/\" &&
 # or simply update it
 sudo su - $APUT_REPO_OWNER sh -c \
