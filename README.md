@@ -3,6 +3,8 @@ aput
 
 `aput` is a package upload tool for debian repository managed by [aptly](http://www.aptly.info).
 
+`dput` support? Yes! Please see [dput2aptly](#dput2aptly).
+
 howto
 =====
 
@@ -94,3 +96,38 @@ If you are an experienced user, just pick what you need.
   ```
 
   Enjoy!
+
+----
+
+dput2aptly
+==========
+
+`dput2aptly` is a script for `dput` as the `post_upload_command`, to upload
+your own packages to an `aptly`-managed debian repo.
+
+howto
+=====
+
+- Copy `dput2aptly` to your aptly server, as it is going to be run
+  remotely via SSH.
+
+  * `dput2aptly` needs to be executable and in `$PATH`.
+
+- Add a new section in your `dput.cf`. For example:
+
+  ```
+  [myrepo]
+  fqdn = deb.yourdomain.com
+  method = rsync
+  login = *
+  incoming = /tmp/deb/incoming
+  pre_upload_command = ssh %(fqdn)s mkdir -p %(incoming)s
+  post_upload_command = ssh %(fqdn)s sudo dput2aptly repo_owner repo_name your_distribution %(incoming)s
+  ```
+
+  * `rsync` is not mandatory. You can use `scp` if you like.
+  * `incoming` should be a directory that can be written by your ssh user.
+
+- Use dput as you were used to before. Enjoy!
+
+  `dput myrepo your_package_0.0.1_version_arch.changes`
