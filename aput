@@ -30,7 +30,7 @@ then
 fi
 
 # Override APUT_REPO_DIST if necessary
-[ -n $DIST ] && APUT_REPO_DIST=$DIST
+[ -n "$DIST" ] && APUT_REPO_DIST="$DIST"
 
 # Verify GPG (if exists), md5sum and file size
 verify() {
@@ -84,15 +84,19 @@ sudo chown -R $APUT_REPO_OWNER: $tmpdir &&
 # Add the files collected into the local repo
 sudo su - $APUT_REPO_OWNER sh -c \
     \"aptly repo add $APUT_REPO_NAME $tmpdir\" &&
-# If publish does not exist, create one
-sudo su - $APUT_REPO_OWNER sh -c \
-    \"[ -f ~/.aptly/public/dists/$APUT_REPO_DIST/Release ] || \
-        aptly publish repo -architectures=$APUT_REPO_ARCH \
-                           -distribution=$APUT_REPO_DIST $APUT_REPO_NAME\" | \
-        sed \"s/your-server/$APUT_HOST/\" &&
-# or simply update it
-sudo su - $APUT_REPO_OWNER sh -c \
-    \"aptly publish update $APUT_REPO_DIST\" &&
+# Loop over $APUT_REPO_DIST to publish
+for dist in $(echo $APUT_REPO_DIST | tr ',' ' ')
+do
+    # If publish does not exist, create one
+    sudo su - $APUT_REPO_OWNER sh -c \
+        \"[ -f ~/.aptly/public/dists/\$dist/Release ] || \
+            aptly publish repo -architectures=$APUT_REPO_ARCH \
+                               -distribution=\$dist $APUT_REPO_NAME\" | \
+            sed \"s/your-server/$APUT_HOST/\" &&
+    # or simply update it
+    sudo su - $APUT_REPO_OWNER sh -c \
+        \"aptly publish update \$dist\"
+done &&
 # Cleanup
 sudo rm -rf $tmpdir
 "
