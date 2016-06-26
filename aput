@@ -29,6 +29,9 @@ then
     exit 2
 fi
 
+# Override APUT_REPO_DIST if necessary
+[ -n $DIST ] && APUT_REPO_DIST=$DIST
+
 # Verify GPG (if exists), md5sum and file size
 verify() {
     local md5
