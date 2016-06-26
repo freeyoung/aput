@@ -86,6 +86,12 @@ If you are an experienced user, just pick what you need.
   $ sudo ln -sf aput /usr/local/bin/aput
   ```
 
+- Add your pubkey to `trustedkeys.gpg`
+
+  ```
+  $ gpg --no-default-keyring --keyring trustedkeys.gpg --recv-keys YOUR_KEY_ID
+  ```
+
 - Build and upload your package
 
   ```
