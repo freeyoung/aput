@@ -16,7 +16,6 @@ fi
 tmpdir=$APUT_INCOMING
 
 # chown the tmpdir so that the repodir owner can access it
-sudo chown -R $APUT_REPO_OWNER: $tmpdir &&
 sudo su - $APUT_REPO_OWNER sh -c "aptly repo add $APUT_REPO_NAME $tmpdir" &&
 # If publish does not exist, create one
 sudo su - $APUT_REPO_OWNER sh -c \
