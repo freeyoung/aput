@@ -128,7 +128,7 @@ howto
   login = *
   incoming = /tmp/deb/incoming
   pre_upload_command = ssh %(fqdn)s mkdir -p %(incoming)s
-  post_upload_command = ssh %(fqdn)s sudo dput2aptly repo_owner repo_name your_distribution %(incoming)s
+  post_upload_command = ssh %(fqdn)s sudo dput2aptly repo_owner repo_name %(myrepo)s %(incoming)s
   ```
 
   * `rsync` is not mandatory. You can use `scp` if you like.
@@ -136,4 +136,7 @@ howto
 
 - Use dput as you were used to before. Enjoy!
 
-  `dput myrepo your_package_0.0.1_version_arch.changes`
+  ```
+  dput myrepo:trusty your_package_0.0.1_version_arch.changes
+  dput myrepo:trusty,xenial your_package_0.0.1_version_arch.changes
+  ```
