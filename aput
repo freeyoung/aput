@@ -69,7 +69,7 @@ do
     [ $return_code = 0 ] || exit $return_code
     fname="$( echo "$line" | awk '{ print $NF }' )"
     filelist+=("$fname")
-done < <(sed -e '0,/Files/d' -e '/^[^ ]/,$d' "$CHANGES_FILE")
+done < <(sed -e '0,/Files/d' -e '/^[^ ]/,$d' "$CHANGES_FILE" | grep -v -E '^$')
 
 # Create a tmpdir on the remote server and scp the files collected
 echo ">>> Uploading..."
